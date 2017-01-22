@@ -1,0 +1,63 @@
+module Main (main) where
+
+import Data.List
+import Card
+import Cardguess
+import Response
+import System.Exit
+import System.Environment
+
+type Selection = [Card]
+type Feedback = (Int, Int, Int, Int, Int)
+
+guessTest :: String -> IO ()
+guessTest answerString = do
+    let answer = map read $ words answerString
+    if validSelection answer then do
+        let (guess,other) = initialGuess $ length answer
+        loop answer guess other 1
+    else do
+      putStrLn "Invalid answer:  input must be a string of one or more"
+      putStrLn "distinct cards separated by whitespace, where each card"
+      putStrLn "is a single character rank 2-9, T, J, Q, K or A, followed"
+      putStrLn "by a single character suit C, D, H, or S."
+    
+
+main :: IO ()
+main = do
+  args <- getArgs
+  let answer = map read args
+  if validSelection answer then do
+      let (guess,other) = initialGuess $ length answer
+      loop answer guess other 1
+    else do
+      putStrLn "Usage:  Cardguesstest c1 ... cn"
+      putStrLn "   where c1 ... cn are different cards between 2C and AS"
+      exitFailure
+
+loop :: Selection -> Selection -> GameState -> Int -> IO ()
+loop answer guess other guesses = do
+    putStrLn $ "Your guess " ++ show guesses ++ ":  " ++ show guess
+    if validSelection guess && length answer == length guess then do
+        let result = response answer guess
+        putStrLn $ "My answer:  " ++ show result
+        if successful guess result then do
+            putStrLn $ "You got it in " ++ show guesses ++ " guesses!"
+            putStrLn $ "Approximate quality = " 
+              ++ show (100 * (qualityFraction $ fromIntegral guesses))
+              ++ "%"
+          else do
+            let (guess',other') = nextGuess (guess,other) result
+            loop answer guess' other' (guesses+1)
+      else do
+        putStrLn "Invalid guess"
+        exitFailure
+
+qualityFraction :: Double -> Double
+qualityFraction guesses =
+    min 1 $ max 0 $ 1.25 - log guesses / (4 * log 4)
+
+successful :: Selection -> Feedback -> Bool
+successful sel (right,_,_,_,_) = right == length sel
+
+validSelection sel = sel == nub sel && length sel > 0

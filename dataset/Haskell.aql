@@ -1,0 +1,51 @@
+create view DataType as
+    extract regex /String|Char|Int|Double|IO/
+        on D.text as DataType
+    from Document D;
+
+create view To as
+    extract regex /->/
+        on D.text as To
+    from Document D;
+
+create view TypeIs as
+    extract regex /[:][:]/
+        on D.text as TypeIs
+    from Document D;
+
+create view Keyword as
+    extract regex /[A-Z][A-Z]+|[A-Z][a-z]+/
+        on D.text as Keyword
+    from Document D;
+
+create view Variable as
+    extract regex /([)[A-Za-z][A-Za-z]+(])|[A-Za-z][A-Za-z]+/
+        on D.text as Variable
+    from Document D;
+
+create view Declaration as
+    extract pattern (<V.Variable>) <T.TypeIs> (<V.Variable>)
+    return group 0 as Declaration
+      and group 1 as FunctionName
+      and group 2 as Argument
+    from Variable V, TypeIs T;
+
+create view Arguments as
+    extract pattern <T.To> (<V.Variable>)
+    return group 0 as Arguments
+      and group 1 as PartialArguments
+    from To T, Variable V;
+
+create view FunctionType as
+	extract pattern (<V.Variable>) <A.Arguments>{0,1,2,3,4,5}
+    return group 0 as FunctionType
+       and group 1 as FunctionArguments
+    from Variable V, Arguments A;
+
+output view DataType;
+output view To;
+output view TypeIs;
+output view Keyword;
+output view Variable;
+output view Declaration;
+output view FunctionType;
